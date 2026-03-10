@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { useFinance, TrainingState } from "../context/FinanceState";
 import { Dashboard } from "../components/Dashboard";
 import { Icon } from "../components/IceWolvesIcons";
@@ -18,7 +18,7 @@ export default function Home() {
     null,
   );
 
-  const tabs: { id: TabId; label: string; icon: JSX.Element }[] = [
+  const tabs: { id: TabId; label: string; icon: ReactElement }[] = [
     { id: "dashboard", label: "Home", icon: Icon.dashboard },
     { id: "players", label: "Players", icon: Icon.players },
     { id: "trainings", label: "Ice Time", icon: Icon.training },
