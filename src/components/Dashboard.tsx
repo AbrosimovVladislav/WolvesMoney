@@ -96,7 +96,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
           margin: "0 -16px 20px",
           padding: "22px 20px 20px",
           background: teamBalance >= 0
-            ? "linear-gradient(135deg, #E8603A 0%, #F97316 100%)"
+            ? "linear-gradient(135deg, #002868 0%, #1A4FA0 100%)"
             : "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
           borderRadius: "0 0 20px 20px",
         }}

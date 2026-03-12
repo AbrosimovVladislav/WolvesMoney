@@ -9,32 +9,33 @@
 }
 
 :root {
-  --bg: #F4F5F7;
+  /* Tampa Bay Lightning: Navy · Electric Blue · Silver */
+  --bg: #EFF3FA;
   --bg2: #ffffff;
-  --bg3: #ECEEF2;
+  --bg3: #E2EAF5;
   --card: #ffffff;
-  --card2: #F8F9FB;
-  --border: #E5E7EB;
-  --primary: #E8603A;
-  --primary2: #CF5130;
+  --card2: #F4F7FD;
+  --border: #C4D3E8;
+  --primary: #002868;
+  --primary2: #001F50;
   /* keep --blue aliases so existing component code doesn't break */
-  --blue: #E8603A;
-  --blue2: #CF5130;
-  --blue-glow: rgba(232, 96, 58, 0.1);
-  --cyan: #F97316;
-  --ice: #374151;
-  --white: #111827;
-  --muted: #6B7280;
+  --blue: #002868;
+  --blue2: #001F50;
+  --blue-glow: rgba(0, 40, 104, 0.1);
+  --cyan: #5B9BD5;
+  --ice: #0D2246;
+  --white: #081428;
+  --muted: #5A7A9A;
   --green: #16A34A;
   --red: #DC2626;
-  --gold: #D97706;
+  --gold: #C8A84B;
   --font-display: "DM Sans", sans-serif;
   --font-body: "DM Sans", sans-serif;
   --font-mono: "DM Mono", monospace;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06);
-  --shadow-blue: 0 4px 12px rgba(232, 96, 58, 0.12);
+  --shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.07);
+  --shadow-blue: 0 4px 12px rgba(0, 40, 104, 0.14);
 }
 
 html,
@@ -153,12 +154,12 @@ button {
 .btn-primary {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(232, 96, 58, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 40, 104, 0.3);
 }
 
 .btn-primary:hover {
   background: var(--primary2);
-  box-shadow: 0 4px 12px rgba(232, 96, 58, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 40, 104, 0.4);
 }
 
 .btn-secondary {
@@ -212,7 +213,7 @@ button {
 }
 
 .tag-blue {
-  background: #FFF0EB;
+  background: #EAF0FB;
   color: var(--primary);
 }
 
