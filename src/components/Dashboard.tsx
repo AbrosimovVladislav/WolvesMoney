@@ -17,7 +17,14 @@ function StatCard(props: {
     white: "var(--white)",
     green: "var(--green)",
     red: "var(--red)",
-    blue: "var(--blue)",
+    blue: "var(--primary)",
+    gold: "var(--gold)",
+  };
+  const accents: Record<string, string> = {
+    white: "var(--border)",
+    green: "var(--green)",
+    red: "var(--red)",
+    blue: "var(--primary)",
     gold: "var(--gold)",
   };
   return (
@@ -27,6 +34,7 @@ function StatCard(props: {
         animationDelay: `${delay}ms`,
         flex: wide ? "1 0 100%" : "1 1 calc(50% - 6px)",
         minWidth: 0,
+        borderTop: `3px solid ${accents[color]}`,
       }}
     >
       <div className="stat-label">{label}</div>
@@ -84,101 +92,53 @@ export function Dashboard({ state }: { state: FinanceState }) {
   return (
     <div style={{ padding: "0 16px 24px" }}>
       <div
-        className="ice-pattern"
         style={{
           margin: "0 -16px 20px",
-          padding: "24px 20px 20px",
-          background:
-            "linear-gradient(160deg, #0d1929 0%, #0a1428 60%, #0d1f35 100%)",
-          borderBottom: "1px solid var(--border)",
-          position: "relative",
-          overflow: "hidden",
+          padding: "22px 20px 20px",
+          background: teamBalance >= 0
+            ? "linear-gradient(135deg, #E8603A 0%, #F97316 100%)"
+            : "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
+          borderRadius: "0 0 20px 20px",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: -20,
-            right: -10,
-            opacity: 0.06,
-          }}
-        >
-          <svg width="180" height="180" viewBox="0 0 100 100" fill="white">
-            <path d="M20 10 L35 35 L15 40 L25 55 L20 75 L40 65 L50 80 L60 65 L80 75 L75 55 L85 40 L65 35 L80 10 L55 30 L50 15 L45 30 Z" />
-          </svg>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ color: "var(--blue)" }}>{Icon.wolf}</div>
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 22,
-                letterSpacing: "0.06em",
-                color: "var(--white)",
-              }}
-            >
-              ICE WOLVES
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--cyan)",
-                letterSpacing: "0.1em",
-                fontWeight: 600,
-                textTransform: "uppercase",
-              }}
-            >
-              Finance Dashboard
-            </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+            Ice Wolves · Team Balance
+          </div>
+          <div style={{
+            width: 62,
+            height: 62,
+            borderRadius: 16,
+            overflow: "hidden",
+            border: "2.5px solid rgba(255,255,255,0.5)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+            flexShrink: 0,
+            marginTop: -6,
+          }}>
+            <img
+              src="/raw-logo.png"
+              alt="Ice Wolves"
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <div
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 44,
-              color: teamBalance >= 0 ? "var(--white)" : "var(--red)",
-              letterSpacing: "0.02em",
-            }}
-          >
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 14 }}>
+          <div style={{ fontSize: 42, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", fontFamily: "var(--font-mono)", lineHeight: 1 }}>
             {fmtShort(teamBalance)}
           </div>
-          <div
-            style={{
-              fontSize: 15,
-              color: "var(--muted)",
-              fontWeight: 500,
-            }}
-          >
-            RSD
-          </div>
-          <div
-            className={`tag ${
-              teamBalance >= 0 ? "tag-green" : "tag-red"
-            }`}
-            style={{ marginLeft: "auto" }}
-          >
-            Team Bank
-          </div>
+          <div style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>RSD</div>
         </div>
-        <div className="progress-bar" style={{ marginTop: 12 }}>
-          <div
-            className="progress-fill"
-            style={{
-              width: `${Math.min(
-                100,
-                Math.max(5, (teamBalance / 50000) * 100),
-              )}%`,
-            }}
-          />
+        <div style={{ height: 6, background: "rgba(255,255,255,0.25)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            borderRadius: 3,
+            background: "rgba(255,255,255,0.85)",
+            width: `${Math.min(100, Math.max(4, (Math.abs(teamBalance) / 50000) * 100))}%`,
+            transition: "width 0.6s ease",
+          }} />
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 5, textAlign: "right" }}>
+          {Math.round((Math.abs(teamBalance) / 50000) * 100)}% of 50k target
         </div>
       </div>
 
@@ -222,8 +182,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
           style={{
             marginBottom: 14,
             animationDelay: "240ms",
-            background:
-              "linear-gradient(135deg, var(--card) 0%, #152038 100%)",
+            background: "var(--card)",
           }}
         >
           <div

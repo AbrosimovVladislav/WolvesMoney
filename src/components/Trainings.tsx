@@ -60,7 +60,12 @@ export function Trainings({ onOpenPayments }: Props) {
           padding: "16px 0 14px",
         }}
       >
-        <div className="section-title">TRAININGS</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <div className="section-title">TRAININGS</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
+            {state.trainings.length}
+          </div>
+        </div>
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setShowCreate(true)}
@@ -91,6 +96,7 @@ export function Trainings({ onOpenPayments }: Props) {
             style={{
               animationDelay: `${i * 40}ms`,
               cursor: "pointer",
+              borderLeft: `3px solid ${result >= 0 ? "var(--green)" : "var(--red)"}`,
             }}
             onClick={() => onOpenPayments(t)}
           >
@@ -237,15 +243,7 @@ export function Trainings({ onOpenPayments }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-handle" />
-            <div
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 24,
-                marginBottom: 18,
-              }}
-            >
-              NEW TRAINING
-            </div>
+            <div className="modal-title">New Training</div>
             <div className="label">Date</div>
             <input
               type="date"

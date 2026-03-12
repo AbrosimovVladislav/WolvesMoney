@@ -69,7 +69,12 @@ export function Players() {
           padding: "16px 0 14px",
         }}
       >
-        <div className="section-title">PLAYERS</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <div className="section-title">PLAYERS</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
+            {state.players.length}
+          </div>
+        </div>
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setShowAdd(true)}
@@ -195,15 +200,7 @@ export function Players() {
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-handle" />
-            <div
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 24,
-                marginBottom: 18,
-              }}
-            >
-              ADD PLAYER
-            </div>
+            <div className="modal-title">Add Player</div>
             <div className="label">Full Name</div>
             <input
               autoFocus

@@ -98,21 +98,18 @@ export function PaymentsView({ training, onBack }: Props) {
           {Icon.back}
         </button>
         <div>
-          <div className="section-title" style={{ fontSize: 22 }}>
-            PAYMENTS
+          <div style={{ fontSize: 20, fontWeight: 800, color: "var(--primary)", letterSpacing: "-0.01em" }}>
+            Payments
           </div>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, marginTop: 1 }}>
             {dateStr(training.date)}
           </div>
         </div>
       </div>
 
       <div
-        className="card glow-border"
-        style={{
-          marginBottom: 14,
-          background: "linear-gradient(135deg, #0d1929, #0a1e36)",
-        }}
+        className="card"
+        style={{ marginBottom: 14 }}
       >
         <div
           style={{
@@ -156,27 +153,18 @@ export function PaymentsView({ training, onBack }: Props) {
             </div>
           ))}
         </div>
-        <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{
-              width: `${Math.min(
-                100,
-                (totalCollected / training.iceCost) * 100,
-              )}%`,
-            }}
-          />
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--muted)",
-            textAlign: "right",
-            marginTop: 4,
-          }}
-        >
-          {Math.round((totalCollected / training.iceCost) * 100)}% of ice cost
-          covered
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+          <div className="progress-bar" style={{ flex: 1 }}>
+            <div
+              className="progress-fill"
+              style={{
+                width: `${Math.min(100, (totalCollected / training.iceCost) * 100)}%`,
+              }}
+            />
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)", minWidth: 36, textAlign: "right", fontFamily: "var(--font-mono)" }}>
+            {Math.round((totalCollected / training.iceCost) * 100)}%
+          </div>
         </div>
       </div>
 
@@ -333,7 +321,7 @@ export function PaymentsView({ training, onBack }: Props) {
         onClick={handleSave}
         style={{ fontSize: 15, padding: 14, borderRadius: 14 }}
       >
-        {saved ? <>{Icon.check} Saved!</> : <>💾 Save All Payments</>}
+        {saved ? <>{Icon.check} Saved!</> : <>Save Payments</>}
       </button>
     </div>
   );
