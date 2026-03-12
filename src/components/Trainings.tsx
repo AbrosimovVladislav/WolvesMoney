@@ -44,9 +44,10 @@ export function Trainings({ onOpenPayments }: Props) {
   const getTrainingStats = (t: TrainingState) => {
     const pays = state.payments.filter((p) => p.trainingId === t.id);
     const collected = pays.reduce((s, p) => s + p.amount, 0);
-    const result = collected - t.iceCost;
+    const totalCost = t.iceCost + (t.goalieCost ?? 0);
+    const result = collected - totalCost;
     const attended = pays.filter((p) => p.attended).length;
-    return { collected, result, attended };
+    return { collected, totalCost, result, attended };
   };
 
   return (
@@ -88,7 +89,7 @@ export function Trainings({ onOpenPayments }: Props) {
       )}
 
       {sorted.map((t, i) => {
-        const { collected, result, attended } = getTrainingStats(t);
+        const { collected, totalCost, result, attended } = getTrainingStats(t);
         return (
           <div
             key={t.id}
@@ -174,8 +175,8 @@ export function Trainings({ onOpenPayments }: Props) {
                   c: "var(--green)",
                 },
                 {
-                  l: "Ice Cost",
-                  v: fmtShort(t.iceCost) + " RSD",
+                  l: t.goalieCost ? "Total Cost" : "Ice Cost",
+                  v: fmtShort(totalCost) + " RSD",
                   c: "var(--red)",
                 },
                 {

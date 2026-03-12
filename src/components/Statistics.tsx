@@ -39,9 +39,13 @@ export function Statistics() {
   const playerTotals = state.players
     .map((p) => ({
       ...p,
-      total: state.payments
-        .filter((pay) => pay.playerId === p.id)
-        .reduce((s, pay) => s + pay.amount, 0),
+      total:
+        state.payments
+          .filter((pay) => pay.playerId === p.id)
+          .reduce((s, pay) => s + pay.amount, 0) +
+        state.deposits
+          .filter((d) => d.playerId === p.id)
+          .reduce((s, d) => s + d.amount, 0),
     }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 8);
