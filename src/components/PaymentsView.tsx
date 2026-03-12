@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFinance, TrainingState } from "../context/FinanceState";
+import { useAuth } from "../context/AuthContext";
 import { Toast, initials, fmt, fmtShort, dateStr } from "./common";
 import { Icon } from "./IceWolvesIcons";
 
@@ -12,6 +13,7 @@ type Props = {
 
 export function PaymentsView({ training, onBack }: Props) {
   const { state, savePayments } = useFinance();
+  const { isAdmin } = useAuth();
   const trainingPayments = state.payments.filter(
     (p) => p.trainingId === training.id,
   );
@@ -171,7 +173,7 @@ export function PaymentsView({ training, onBack }: Props) {
       </div>
 
       {/* Goalie payment */}
-      <div
+      {isAdmin && <div
         className="card"
         style={{
           marginBottom: 14,
@@ -240,17 +242,19 @@ export function PaymentsView({ training, onBack }: Props) {
             />
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Fill/Clear buttons */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <button className="btn btn-secondary btn-sm btn-block" onClick={fillAll}>
-          Fill All
-        </button>
-        <button className="btn btn-secondary btn-sm btn-block" onClick={clearAll}>
-          Clear All
-        </button>
-      </div>
+      {isAdmin && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <button className="btn btn-secondary btn-sm btn-block" onClick={fillAll}>
+            Fill All
+          </button>
+          <button className="btn btn-secondary btn-sm btn-block" onClick={clearAll}>
+            Clear All
+          </button>
+        </div>
+      )}
 
       {/* Player list */}
       <div className="card" style={{ padding: "8px 14px", marginBottom: 14 }}>
@@ -298,24 +302,40 @@ export function PaymentsView({ training, onBack }: Props) {
                 )}
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <button
-                  className="btn btn-sm"
-                  onClick={() => toggleAttended(p.id)}
-                  style={{
+                {isAdmin ? (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => toggleAttended(p.id)}
+                    style={{
+                      padding: "4px 10px",
+                      background: isAttended ? "rgba(48,209,88,0.15)" : "var(--bg3)",
+                      color: isAttended ? "var(--green)" : "var(--muted)",
+                      border: `1px solid ${isAttended ? "rgba(48,209,88,0.4)" : "var(--border)"}`,
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      minWidth: 32,
+                    }}
+                  >
+                    {isAttended ? "✓" : "—"}
+                  </button>
+                ) : (
+                  <span style={{
                     padding: "4px 10px",
-                    background: isAttended ? "rgba(48,209,88,0.15)" : "var(--bg3)",
+                    background: isAttended ? "rgba(48,209,88,0.10)" : "var(--bg3)",
                     color: isAttended ? "var(--green)" : "var(--muted)",
-                    border: `1px solid ${isAttended ? "rgba(48,209,88,0.4)" : "var(--border)"}`,
                     borderRadius: 6,
                     fontSize: 13,
                     fontWeight: 600,
                     minWidth: 32,
-                  }}
-                >
-                  {isAttended ? "✓" : "—"}
-                </button>
+                    display: "inline-block",
+                    textAlign: "center",
+                  }}>
+                    {isAttended ? "✓" : "—"}
+                  </span>
+                )}
 
-                {isAttended && (
+                {isAttended && isAdmin && (
                   <>
                     <button
                       className="btn btn-sm"
@@ -353,19 +373,26 @@ export function PaymentsView({ training, onBack }: Props) {
                     />
                   </>
                 )}
+                {isAttended && !isAdmin && (
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--green)" }}>
+                    {amt > 0 ? `+${fmt(amt)}` : ""}
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      <button
-        className="btn btn-primary btn-block"
-        onClick={handleSave}
-        style={{ fontSize: 15, padding: 14, borderRadius: 14 }}
-      >
-        {saved ? <>{Icon.check} Saved!</> : <>Save Payments</>}
-      </button>
+      {isAdmin && (
+        <button
+          className="btn btn-primary btn-block"
+          onClick={handleSave}
+          style={{ fontSize: 15, padding: 14, borderRadius: 14 }}
+        >
+          {saved ? <>{Icon.check} Saved!</> : <>Save Payments</>}
+        </button>
+      )}
     </div>
   );
 }

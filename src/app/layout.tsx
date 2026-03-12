@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { FinanceStateProvider } from "../context/FinanceState";
+import { ClientRoot } from "../components/ClientRoot";
 
 export const metadata: Metadata = {
-  title: "Ice Wolves Finance",
+  title: "HC Vukovi Finance",
   description: "Team finance tracker for ice hockey",
 };
 
@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <FinanceStateProvider>
+        <ClientRoot>
           <div
             style={{
               minHeight: "100dvh",
@@ -28,7 +28,7 @@ export default function RootLayout({
           >
             {children}
           </div>
-        </FinanceStateProvider>
+        </ClientRoot>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useState, type ReactElement } from "react";
 import { useFinance, TrainingState } from "../context/FinanceState";
+import { useAuth } from "../context/AuthContext";
 import { Dashboard } from "../components/Dashboard";
 import { Icon } from "../components/IceWolvesIcons";
 import { Players } from "../components/Players";
@@ -13,6 +14,7 @@ type TabId = "dashboard" | "players" | "trainings" | "stats";
 
 export default function Home() {
   const { state } = useFinance();
+  const { isAdmin, role, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [paymentTraining, setPaymentTraining] = useState<TrainingState | null>(
     null,
@@ -44,7 +46,7 @@ export default function Home() {
             color: "var(--muted)",
           }}
         >
-          Loading Ice Wolves data...
+          Loading HC Vukovi data...
         </div>
       );
     }
@@ -87,7 +89,7 @@ export default function Home() {
         style={{
           flex: 1,
           overflowY: "auto",
-          paddingBottom: 72,
+          paddingBottom: 96,
         }}
       >
         {renderContent()}
@@ -107,22 +109,49 @@ export default function Home() {
             borderTop: "1px solid var(--border)",
             boxShadow: "0 -1px 0 var(--border)",
             display: "flex",
+            flexDirection: "column",
             zIndex: 50,
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
-          {tabs.map((tab) => (
+          <div style={{ display: "flex" }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={`nav-tab ${activeTab === tab.id ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "4px 14px 6px",
+            borderTop: "1px solid var(--border)",
+          }}>
+            <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>
+              {isAdmin ? "🛡️ Администратор" : "🏒 Игрок"}
+            </span>
             <button
-              key={tab.id}
-              className={`nav-tab ${
-                activeTab === tab.id ? "active" : ""
-              }`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={logout}
+              style={{
+                fontSize: 11,
+                color: "var(--muted)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 6px",
+                borderRadius: 6,
+                fontWeight: 600,
+              }}
             >
-              {tab.icon}
-              {tab.label}
+              Выйти
             </button>
-          ))}
+          </div>
         </div>
       )}
     </>

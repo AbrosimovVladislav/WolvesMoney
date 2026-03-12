@@ -99,7 +99,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
-            Ice Wolves · Team Balance
+            HC Vukovi · Team Balance
           </div>
           <div style={{
             width: 62,
@@ -113,7 +113,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
           }}>
             <img
               src="/raw-logo.png"
-              alt="Ice Wolves"
+              alt="HC Vukovi"
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
           </div>
@@ -383,6 +383,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
         <div
           className="fade-up"
           style={{
+            marginTop: debtors.length > 0 ? 12 : 0,
             animationDelay: "400ms",
             background: "rgba(22,163,74,0.07)",
             border: "1px solid rgba(22,163,74,0.2)",

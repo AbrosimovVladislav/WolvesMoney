@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFinance, TrainingState } from "../context/FinanceState";
+import { useAuth } from "../context/AuthContext";
 import { Toast, today, fmtShort, fmt } from "./common";
 import { Icon } from "./IceWolvesIcons";
 
@@ -11,6 +12,7 @@ type Props = {
 
 export function Trainings({ onOpenPayments }: Props) {
   const { state, createTraining, removeTraining } = useFinance();
+  const { isAdmin } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     date: today(),
@@ -67,12 +69,14 @@ export function Trainings({ onOpenPayments }: Props) {
             {state.trainings.length}
           </div>
         </div>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => setShowCreate(true)}
-        >
-          {Icon.plus} New
-        </button>
+        {isAdmin && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowCreate(true)}
+          >
+            {Icon.plus} New
+          </button>
+        )}
       </div>
 
       {sorted.length === 0 && (
@@ -151,13 +155,15 @@ export function Trainings({ onOpenPayments }: Props) {
                   {result >= 0 ? "+" : ""}
                   {fmtShort(result)}
                 </div>
-                <button
-                  className="btn btn-danger btn-sm"
-                  style={{ padding: "5px 8px" }}
-                  onClick={(e) => handleRemove(t.id, e)}
-                >
-                  {Icon.trash}
-                </button>
+                {isAdmin && (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    style={{ padding: "5px 8px" }}
+                    onClick={(e) => handleRemove(t.id, e)}
+                  >
+                    {Icon.trash}
+                  </button>
+                )}
               </div>
             </div>
             <div className="divider" style={{ margin: "12px 0" }} />

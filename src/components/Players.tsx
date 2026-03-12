@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useFinance } from "../context/FinanceState";
+import { useAuth } from "../context/AuthContext";
 import { Toast, initials, fmtShort, fmt, dateStr } from "./common";
 import { Icon } from "./IceWolvesIcons";
 
 export function Players() {
   const { state, addPlayer, removePlayer, updatePlayerFee, addDeposit } = useFinance();
+  const { isAdmin } = useAuth();
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newFee, setNewFee] = useState(1500);
@@ -97,12 +99,14 @@ export function Players() {
             {state.players.length}
           </div>
         </div>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => setShowAdd(true)}
-        >
-          {Icon.plus} Add
-        </button>
+        {isAdmin && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowAdd(true)}
+          >
+            {Icon.plus} Add
+          </button>
+        )}
       </div>
 
       <div style={{ marginBottom: 12 }}>
@@ -230,8 +234,8 @@ export function Players() {
             </div>
 
             {/* Fee */}
-            <div className="label">Fee per Training</div>
-            {editingFee ? (
+            {isAdmin && <div className="label">Fee per Training</div>}
+            {isAdmin && (editingFee ? (
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 <input
                   type="number"
@@ -255,27 +259,29 @@ export function Players() {
                   Edit
                 </button>
               </div>
-            )}
+            ))}
 
             {/* Deposit section */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <div className="label" style={{ marginBottom: 0 }}>Deposit</div>
-                <button
-                  className="btn btn-sm"
-                  onClick={() => setShowDeposit((v) => !v)}
-                  style={{
-                    padding: "4px 10px",
-                    background: showDeposit ? "rgba(22,163,74,0.12)" : "var(--bg3)",
-                    color: showDeposit ? "var(--green)" : "var(--muted)",
-                    border: `1px solid ${showDeposit ? "rgba(22,163,74,0.3)" : "var(--border)"}`,
-                    borderRadius: 6,
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  + Add
-                </button>
+                {isAdmin && (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setShowDeposit((v) => !v)}
+                    style={{
+                      padding: "4px 10px",
+                      background: showDeposit ? "rgba(22,163,74,0.12)" : "var(--bg3)",
+                      color: showDeposit ? "var(--green)" : "var(--muted)",
+                      border: `1px solid ${showDeposit ? "rgba(22,163,74,0.3)" : "var(--border)"}`,
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    + Add
+                  </button>
+                )}
               </div>
 
               {showDeposit && (
@@ -415,12 +421,14 @@ export function Players() {
               )}
             </div>
 
-            <button
-              className="btn btn-danger btn-block"
-              onClick={() => handleRemove(selected.id)}
-            >
-              {Icon.trash} Remove Player
-            </button>
+            {isAdmin && (
+              <button
+                className="btn btn-danger btn-block"
+                onClick={() => handleRemove(selected.id)}
+              >
+                {Icon.trash} Remove Player
+              </button>
+            )}
           </div>
         </div>
       )}
