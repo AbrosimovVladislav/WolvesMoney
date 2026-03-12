@@ -16,12 +16,14 @@ import {
   createTraining as dbCreateTraining,
   removeTraining as dbRemoveTraining,
   savePayments as dbSavePayments,
+  updatePlayerFee as dbUpdatePlayerFee,
 } from "../lib/db";
 
 export type PlayerState = {
   id: number;
   name: string;
   balance: number;
+  defaultFee: number;
 };
 
 export type TrainingState = {
@@ -38,6 +40,7 @@ export type PaymentState = {
   playerId: number;
   trainingId: number;
   amount: number;
+  attended: boolean;
 };
 
 export type FinanceState = {
@@ -69,6 +72,7 @@ function mapFromFullState(full: FullState): Omit<FinanceState, "loading" | "erro
       id: p.id,
       name: p.name,
       balance: p.balance,
+      defaultFee: p.default_fee,
     })),
     trainings: full.trainings.map((t) => ({
       id: t.id,
@@ -83,6 +87,7 @@ function mapFromFullState(full: FullState): Omit<FinanceState, "loading" | "erro
       playerId: p.player_id,
       trainingId: p.training_id,
       amount: p.amount,
+      attended: p.attended,
     })),
     teamBalance: full.teamBalance,
   };
@@ -109,11 +114,12 @@ function reducer(state: FinanceState, action: Action): FinanceState {
 type FinanceContextValue = {
   state: FinanceState;
   refresh: () => Promise<void>;
-  addPlayer: (name: string) => Promise<void>;
+  addPlayer: (name: string, defaultFee?: number) => Promise<void>;
   removePlayer: (id: number) => Promise<void>;
   createTraining: (input: { date: string; iceCost: number; notes: string }) => Promise<void>;
   removeTraining: (id: number) => Promise<void>;
-  savePayments: (trainingId: number, amounts: Record<number, number>) => Promise<void>;
+  savePayments: (trainingId: number, entries: Record<number, { attended: boolean; amount: number }>) => Promise<void>;
+  updatePlayerFee: (id: number, fee: number) => Promise<void>;
 };
 
 const FinanceContext = createContext<FinanceContextValue | undefined>(undefined);
@@ -143,11 +149,11 @@ export function FinanceStateProvider({ children }: { children: React.ReactNode }
     () => ({
       state,
       refresh: load,
-      addPlayer: async (name: string) => {
-        await dbAddPlayer(name);
+      addPlayer: async (name, defaultFee) => {
+        await dbAddPlayer(name, defaultFee);
         await load();
       },
-      removePlayer: async (id: number) => {
+      removePlayer: async (id) => {
         await dbRemovePlayer(id);
         await load();
       },
@@ -159,12 +165,16 @@ export function FinanceStateProvider({ children }: { children: React.ReactNode }
         });
         await load();
       },
-      removeTraining: async (id: number) => {
+      removeTraining: async (id) => {
         await dbRemoveTraining(id);
         await load();
       },
-      savePayments: async (trainingId, amounts) => {
-        await dbSavePayments(trainingId, amounts);
+      savePayments: async (trainingId, entries) => {
+        await dbSavePayments(trainingId, entries);
+        await load();
+      },
+      updatePlayerFee: async (id, fee) => {
+        await dbUpdatePlayerFee(id, fee);
         await load();
       },
     }),
@@ -181,4 +191,3 @@ export function useFinance() {
   }
   return ctx;
 }
-

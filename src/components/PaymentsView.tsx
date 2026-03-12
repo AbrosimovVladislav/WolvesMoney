@@ -5,8 +5,6 @@ import { useFinance, TrainingState } from "../context/FinanceState";
 import { Toast, initials, fmt, fmtShort, dateStr } from "./common";
 import { Icon } from "./IceWolvesIcons";
 
-const DEFAULT_PLAYER_FEE = 1500;
-
 type Props = {
   training: TrainingState;
   onBack: () => void;
@@ -18,50 +16,68 @@ export function PaymentsView({ training, onBack }: Props) {
     (p) => p.trainingId === training.id,
   );
 
-  const getPlayerAmount = (pid: number) =>
-    trainingPayments.find((p) => p.playerId === pid)?.amount ?? 0;
+  const [attended, setAttended] = useState<Record<number, boolean>>(() => {
+    const m: Record<number, boolean> = {};
+    state.players.forEach((p) => {
+      m[p.id] = trainingPayments.find((tp) => tp.playerId === p.id)?.attended ?? false;
+    });
+    return m;
+  });
 
   const [amounts, setAmounts] = useState<Record<number, number>>(() => {
     const m: Record<number, number> = {};
     state.players.forEach((p) => {
-      m[p.id] = getPlayerAmount(p.id);
+      m[p.id] = trainingPayments.find((tp) => tp.playerId === p.id)?.amount ?? 0;
     });
     return m;
   });
+
   const [toast, setToast] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const totalCollected = Object.values(amounts).reduce(
-    (s, v) => s + (Number(v) || 0),
+  const totalCollected = state.players.reduce(
+    (s, p) => s + (attended[p.id] ? Number(amounts[p.id]) || 0 : 0),
     0,
   );
   const result = totalCollected - training.iceCost;
+
+  const toggleAttended = (pid: number) =>
+    setAttended((a) => ({ ...a, [pid]: !a[pid] }));
 
   const setQuickPay = (pid: number, val: number) =>
     setAmounts((a) => ({ ...a, [pid]: val }));
 
   const fillAll = () => {
-    const m: Record<number, number> = {};
+    const newAttended: Record<number, boolean> = {};
+    const newAmounts: Record<number, number> = {};
     state.players.forEach((p) => {
-      m[p.id] = DEFAULT_PLAYER_FEE;
+      newAttended[p.id] = true;
+      newAmounts[p.id] = p.defaultFee;
     });
-    setAmounts(m);
+    setAttended(newAttended);
+    setAmounts(newAmounts);
   };
 
   const clearAll = () => {
-    const m: Record<number, number> = {};
+    const newAttended: Record<number, boolean> = {};
+    const newAmounts: Record<number, number> = {};
     state.players.forEach((p) => {
-      m[p.id] = 0;
+      newAttended[p.id] = false;
+      newAmounts[p.id] = 0;
     });
-    setAmounts(m);
+    setAttended(newAttended);
+    setAmounts(newAmounts);
   };
 
   const handleSave = async () => {
-    const numeric: Record<number, number> = {};
-    Object.entries(amounts).forEach(([pid, val]) => {
-      numeric[Number(pid)] = Number(val) || 0;
+    const entries: Record<number, { attended: boolean; amount: number }> = {};
+    state.players.forEach((p) => {
+      entries[p.id] = {
+        attended: attended[p.id] ?? false,
+        amount: attended[p.id] ? Number(amounts[p.id]) || 0 : 0,
+      };
     });
-    await savePayments(training.id, numeric);
+    await savePayments(training.id, entries);
     setSaved(true);
     setToast("Payments saved!");
   };
@@ -107,16 +123,8 @@ export function PaymentsView({ training, onBack }: Props) {
           }}
         >
           {[
-            {
-              l: "Collected",
-              v: fmt(totalCollected),
-              c: "var(--green)",
-            },
-            {
-              l: "Ice Cost",
-              v: fmt(training.iceCost),
-              c: "var(--red)",
-            },
+            { l: "Collected", v: fmt(totalCollected), c: "var(--green)" },
+            { l: "Ice Cost", v: fmt(training.iceCost), c: "var(--red)" },
             {
               l: "Result",
               v: fmt(result),
@@ -177,7 +185,7 @@ export function PaymentsView({ training, onBack }: Props) {
           className="btn btn-secondary btn-sm btn-block"
           onClick={fillAll}
         >
-          Fill All ({DEFAULT_PLAYER_FEE})
+          Fill All
         </button>
         <button
           className="btn btn-secondary btn-sm btn-block"
@@ -187,11 +195,9 @@ export function PaymentsView({ training, onBack }: Props) {
         </button>
       </div>
 
-      <div
-        className="card"
-        style={{ padding: "8px 14px", marginBottom: 14 }}
-      >
+      <div className="card" style={{ padding: "8px 14px", marginBottom: 14 }}>
         {state.players.map((p, i) => {
+          const isAttended = attended[p.id] ?? false;
           const amt = Number(amounts[p.id]) || 0;
           return (
             <div
@@ -211,12 +217,7 @@ export function PaymentsView({ training, onBack }: Props) {
             >
               <div
                 className="avatar"
-                style={{
-                  width: 32,
-                  height: 32,
-                  fontSize: 11,
-                  flexShrink: 0,
-                }}
+                style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0 }}
               >
                 {initials(p.name)}
               </div>
@@ -236,10 +237,7 @@ export function PaymentsView({ training, onBack }: Props) {
                   <div
                     style={{
                       fontSize: 11,
-                      color:
-                        p.balance > 0
-                          ? "var(--green)"
-                          : "var(--red)",
+                      color: p.balance > 0 ? "var(--green)" : "var(--red)",
                     }}
                   >
                     {p.balance > 0
@@ -249,84 +247,81 @@ export function PaymentsView({ training, onBack }: Props) {
                   </div>
                 )}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 6,
-                  alignItems: "center",
-                }}
-              >
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {/* Attendance toggle */}
                 <button
                   className="btn btn-sm"
-                  onClick={() => setQuickPay(p.id, 0)}
+                  onClick={() => toggleAttended(p.id)}
                   style={{
-                    padding: "4px 8px",
-                    background:
-                      amt === 0
-                        ? "rgba(255,69,58,0.15)"
-                        : "var(--bg3)",
-                    color:
-                      amt === 0
-                        ? "var(--red)"
-                        : "var(--muted)",
-                    border: "1px solid var(--border)",
+                    padding: "4px 10px",
+                    background: isAttended
+                      ? "rgba(48,209,88,0.15)"
+                      : "var(--bg3)",
+                    color: isAttended ? "var(--green)" : "var(--muted)",
+                    border: `1px solid ${isAttended ? "rgba(48,209,88,0.4)" : "var(--border)"}`,
                     borderRadius: 6,
-                    fontSize: 11,
-                  }}
-                >
-                  ✕
-                </button>
-                <button
-                  className="btn btn-sm"
-                  onClick={() =>
-                    setQuickPay(p.id, DEFAULT_PLAYER_FEE)
-                  }
-                  style={{
-                    padding: "4px 8px",
-                    background:
-                      amt === DEFAULT_PLAYER_FEE
-                        ? "rgba(10,132,255,0.2)"
-                        : "var(--bg3)",
-                    color:
-                      amt === DEFAULT_PLAYER_FEE
-                        ? "var(--blue)"
-                        : "var(--muted)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    fontSize: 11,
-                  }}
-                >
-                  {fmtShort(DEFAULT_PLAYER_FEE)}
-                </button>
-                <input
-                  type="number"
-                  value={amounts[p.id] === 0 ? "" : amounts[p.id]}
-                  placeholder="0"
-                  onChange={(e) =>
-                    setAmounts((a) => ({
-                      ...a,
-                      [p.id]:
-                        e.target.value === ""
-                          ? 0
-                          : Number(e.target.value),
-                    }))
-                  }
-                  style={{
-                    width: 72,
-                    textAlign: "right",
-                    padding: "7px 8px",
                     fontSize: 13,
-                    fontFamily: "var(--font-mono)",
-                    background:
-                      amt > 0
-                        ? "rgba(48,209,88,0.06)"
-                        : "var(--bg3)",
-                    borderColor:
-                      amt > 0
-                        ? "rgba(48,209,88,0.3)"
-                        : "var(--border)",
+                    fontWeight: 600,
+                    minWidth: 32,
                   }}
-                />
+                >
+                  {isAttended ? "✓" : "—"}
+                </button>
+
+                {/* Amount fields — only when attended */}
+                {isAttended && (
+                  <>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => setQuickPay(p.id, p.defaultFee)}
+                      style={{
+                        padding: "4px 8px",
+                        background:
+                          amt === p.defaultFee
+                            ? "rgba(10,132,255,0.2)"
+                            : "var(--bg3)",
+                        color:
+                          amt === p.defaultFee
+                            ? "var(--blue)"
+                            : "var(--muted)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 6,
+                        fontSize: 11,
+                      }}
+                    >
+                      {fmtShort(p.defaultFee)}
+                    </button>
+                    <input
+                      type="number"
+                      value={amt === 0 ? "" : amt}
+                      placeholder="0"
+                      onChange={(e) =>
+                        setAmounts((a) => ({
+                          ...a,
+                          [p.id]:
+                            e.target.value === ""
+                              ? 0
+                              : Number(e.target.value),
+                        }))
+                      }
+                      style={{
+                        width: 72,
+                        textAlign: "right",
+                        padding: "7px 8px",
+                        fontSize: 13,
+                        fontFamily: "var(--font-mono)",
+                        background:
+                          amt > 0
+                            ? "rgba(48,209,88,0.06)"
+                            : "var(--bg3)",
+                        borderColor:
+                          amt > 0
+                            ? "rgba(48,209,88,0.3)"
+                            : "var(--border)",
+                      }}
+                    />
+                  </>
+                )}
               </div>
             </div>
           );
@@ -336,21 +331,10 @@ export function PaymentsView({ training, onBack }: Props) {
       <button
         className="btn btn-primary btn-block"
         onClick={handleSave}
-        style={{
-          fontSize: 15,
-          padding: 14,
-          borderRadius: 14,
-        }}
+        style={{ fontSize: 15, padding: 14, borderRadius: 14 }}
       >
-        {saved ? (
-          <>
-            {Icon.check} Saved!
-          </>
-        ) : (
-          <>💾 Save All Payments</>
-        )}
+        {saved ? <>{Icon.check} Saved!</> : <>💾 Save All Payments</>}
       </button>
     </div>
   );
 }
-

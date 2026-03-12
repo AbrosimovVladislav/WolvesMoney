@@ -35,7 +35,7 @@ No trainings yet. Create your first one!
 - Три мини-блока:
   - **Collected** — собрано RSD (зелёный)
   - **Ice Cost** — стоимость льда RSD (красный)
-  - **Paid** — кол-во заплативших из общего (синий, формат `N/M`)
+  - **Attended** — кол-во пришедших из общего (синий, формат `N/M`)
 - Подпись внизу: "TAP TO ENTER PAYMENTS →"
 
 Нажатие на карточку (кроме кнопки удаления) → переход на экран **Payments**.
@@ -62,9 +62,11 @@ No trainings yet. Create your first one!
 ## Удаление тренировки
 
 При нажатии 🗑:
-- Тренировка удаляется из БД
-- Командный баланс корректируется: `teamBalance -= training.result_balance`
-- Toast: "Training removed"
+1. Загружаются все payments тренировки
+2. Для каждого payment где `attended = true`: откатывается баланс игрока (`player.balance -= amount - player.default_fee`)
+3. Тренировка удаляется из БД (payments удаляются автоматически через CASCADE)
+4. Командный баланс корректируется: `teamBalance -= training.result_balance`
+5. Toast: "Training removed"
 
 ---
 
@@ -78,4 +80,4 @@ No trainings yet. Create your first one!
 
 - Тренировки сортируются по дате убывания (самые новые вверху)
 - Статистика (`collected`, `paid`) вычисляется на лету из массива `payments` в стейте
-- `Paid` = кол-во уникальных игроков с `amount > 0` для данной тренировки
+- `Attended` = кол-во игроков с `attended = true` для данной тренировки

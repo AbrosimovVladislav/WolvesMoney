@@ -1,11 +1,10 @@
 import { supabase } from "./supabaseClient";
 
-const DEFAULT_FEE = 1500;
-
 export type Player = {
   id: number;
   name: string;
   balance: number;
+  default_fee: number;
   created_at?: string;
 };
 
@@ -24,6 +23,7 @@ export type Payment = {
   player_id: number;
   training_id: number;
   amount: number;
+  attended: boolean;
   created_at?: string;
 };
 
@@ -45,10 +45,10 @@ export async function getPlayers(): Promise<Player[]> {
   return data ?? [];
 }
 
-export async function addPlayer(name: string): Promise<Player> {
+export async function addPlayer(name: string, defaultFee = 1500): Promise<Player> {
   const { data, error } = await supabase
     .from("players")
-    .insert({ name, balance: 0 })
+    .insert({ name, balance: 0, default_fee: defaultFee })
     .select()
     .single();
   if (error) throw error;
@@ -57,6 +57,14 @@ export async function addPlayer(name: string): Promise<Player> {
 
 export async function removePlayer(id: number): Promise<void> {
   const { error } = await supabase.from("players").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function updatePlayerFee(id: number, fee: number): Promise<void> {
+  const { error } = await supabase
+    .from("players")
+    .update({ default_fee: fee })
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -99,13 +107,35 @@ export async function removeTraining(id: number): Promise<void> {
     .eq("id", id)
     .single();
 
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("player_id, amount, attended")
+    .eq("training_id", id);
+
+  const playerIds = [...new Set((payments ?? []).map((p) => p.player_id))];
+  const { data: playersData } = playerIds.length
+    ? await supabase.from("players").select("id, default_fee").in("id", playerIds)
+    : { data: [] };
+  const feeMap: Record<number, number> = {};
+  (playersData ?? []).forEach((p) => { feeMap[p.id] = p.default_fee; });
+
   const { error } = await supabase.from("trainings").delete().eq("id", id);
   if (error) throw error;
 
+  for (const pay of payments ?? []) {
+    if (!pay.attended) continue;
+    const defaultFee = feeMap[pay.player_id] ?? 1500;
+    const diff = (pay.amount as number) - defaultFee;
+    if (diff !== 0) {
+      await supabase.rpc("adjust_player_balance", {
+        player_id: pay.player_id,
+        amount: -diff,
+      });
+    }
+  }
+
   if (training) {
-    await supabase.rpc("adjust_team_balance", {
-      amount: -training.result_balance,
-    });
+    await supabase.rpc("adjust_team_balance", { amount: -training.result_balance });
   }
 }
 
@@ -124,7 +154,7 @@ export async function getPaymentsForTraining(
 
 export async function savePayments(
   trainingId: number,
-  amounts: Record<number, number>,
+  entries: Record<number, { attended: boolean; amount: number }>,
 ): Promise<{ collected: number; result: number }> {
   const { data: training, error: tErr } = await supabase
     .from("trainings")
@@ -135,7 +165,7 @@ export async function savePayments(
 
   const { data: oldPayments } = await supabase
     .from("payments")
-    .select("*")
+    .select("player_id, amount, attended")
     .eq("training_id", trainingId);
 
   const oldCollected = (oldPayments ?? []).reduce(
@@ -144,9 +174,23 @@ export async function savePayments(
   );
   const oldResult = oldCollected - (training?.ice_cost ?? 0);
 
-  // Reverse old player balances
+  const allPlayerIds = [
+    ...new Set([
+      ...(oldPayments ?? []).map((p) => p.player_id),
+      ...Object.keys(entries).map(Number),
+    ]),
+  ];
+  const { data: playersData } = allPlayerIds.length
+    ? await supabase.from("players").select("id, default_fee").in("id", allPlayerIds)
+    : { data: [] };
+  const feeMap: Record<number, number> = {};
+  (playersData ?? []).forEach((p) => { feeMap[p.id] = p.default_fee; });
+
+  // Reverse old player balances (attended only)
   for (const pay of oldPayments ?? []) {
-    const diff = (pay.amount as number) - DEFAULT_FEE;
+    if (!pay.attended) continue;
+    const defaultFee = feeMap[pay.player_id] ?? 1500;
+    const diff = (pay.amount as number) - defaultFee;
     if (diff !== 0) {
       await supabase.rpc("adjust_player_balance", {
         player_id: pay.player_id,
@@ -158,17 +202,18 @@ export async function savePayments(
   await supabase.from("payments").delete().eq("training_id", trainingId);
 
   let newCollected = 0;
-  const inserts: { player_id: number; training_id: number; amount: number }[] =
-    [];
+  const inserts: {
+    player_id: number;
+    training_id: number;
+    amount: number;
+    attended: boolean;
+  }[] = [];
 
-  for (const [pid, amt] of Object.entries(amounts)) {
-    const numAmt = Number(amt) || 0;
-    inserts.push({
-      player_id: Number(pid),
-      training_id: trainingId,
-      amount: numAmt,
-    });
-    newCollected += numAmt;
+  for (const [pid, entry] of Object.entries(entries)) {
+    const numPid = Number(pid);
+    const amount = entry.attended ? (Number(entry.amount) || 0) : 0;
+    inserts.push({ player_id: numPid, training_id: trainingId, amount, attended: entry.attended });
+    newCollected += amount;
   }
 
   if (inserts.length > 0) {
@@ -176,14 +221,14 @@ export async function savePayments(
     if (iErr) throw iErr;
   }
 
-  // Update player balances
-  for (const [pid, amt] of Object.entries(amounts)) {
-    const diff = (Number(amt) || 0) - DEFAULT_FEE;
+  // Apply new player balances (attended only)
+  for (const [pid, entry] of Object.entries(entries)) {
+    if (!entry.attended) continue;
+    const numPid = Number(pid);
+    const defaultFee = feeMap[numPid] ?? 1500;
+    const diff = (Number(entry.amount) || 0) - defaultFee;
     if (diff !== 0) {
-      await supabase.rpc("adjust_player_balance", {
-        player_id: Number(pid),
-        amount: diff,
-      });
+      await supabase.rpc("adjust_player_balance", { player_id: numPid, amount: diff });
     }
   }
 
@@ -191,15 +236,10 @@ export async function savePayments(
 
   await supabase
     .from("trainings")
-    .update({
-      total_collected: newCollected,
-      result_balance: newResult,
-    })
+    .update({ total_collected: newCollected, result_balance: newResult })
     .eq("id", trainingId);
 
-  await supabase.rpc("adjust_team_balance", {
-    amount: newResult - oldResult,
-  });
+  await supabase.rpc("adjust_team_balance", { amount: newResult - oldResult });
 
   return { collected: newCollected, result: newResult };
 }
@@ -226,11 +266,5 @@ export async function loadFullState(): Promise<FullState> {
 
   const payments = (paymentsRes.data as Payment[]) ?? [];
 
-  return {
-    players,
-    trainings,
-    payments,
-    teamBalance: balance,
-  };
+  return { players, trainings, payments, teamBalance: balance };
 }
-

@@ -6,11 +6,14 @@ import { Toast, initials, fmtShort, fmt, dateStr } from "./common";
 import { Icon } from "./IceWolvesIcons";
 
 export function Players() {
-  const { state, addPlayer, removePlayer } = useFinance();
+  const { state, addPlayer, removePlayer, updatePlayerFee } = useFinance();
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newFee, setNewFee] = useState(1500);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [editingFee, setEditingFee] = useState(false);
+  const [feeInput, setFeeInput] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
 
   const selected =
@@ -27,8 +30,9 @@ export function Players() {
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await addPlayer(newName.trim());
+    await addPlayer(newName.trim(), newFee);
     setNewName("");
+    setNewFee(1500);
     setShowAdd(false);
     setToast("Player added");
   };
@@ -37,6 +41,20 @@ export function Players() {
     await removePlayer(id);
     setSelectedId(null);
     setToast("Player removed");
+  };
+
+  const handleSaveFee = async () => {
+    if (!selected) return;
+    await updatePlayerFee(selected.id, feeInput);
+    setEditingFee(false);
+    setToast("Fee updated");
+  };
+
+  const openDetail = (id: number) => {
+    const p = state.players.find((pl) => pl.id === id);
+    setSelectedId(id);
+    setFeeInput(p?.defaultFee ?? 1500);
+    setEditingFee(false);
   };
 
   return (
@@ -70,11 +88,7 @@ export function Players() {
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         {[
-          {
-            l: "Total",
-            v: state.players.length,
-            c: "var(--blue)",
-          },
+          { l: "Total", v: state.players.length, c: "var(--blue)" },
           {
             l: "Debtors",
             v: state.players.filter((p) => p.balance < 0).length,
@@ -89,11 +103,7 @@ export function Players() {
           <div
             key={l}
             className="card"
-            style={{
-              flex: 1,
-              textAlign: "center",
-              padding: "10px 6px",
-            }}
+            style={{ flex: 1, textAlign: "center", padding: "10px 6px" }}
           >
             <div
               style={{
@@ -123,11 +133,8 @@ export function Players() {
           <div
             key={p.id}
             className="player-row fade-up"
-            style={{
-              animationDelay: `${i * 25}ms`,
-              cursor: "pointer",
-            }}
-            onClick={() => setSelectedId(p.id)}
+            style={{ animationDelay: `${i * 25}ms`, cursor: "pointer" }}
+            onClick={() => openDetail(p.id)}
           >
             <div
               className="avatar"
@@ -154,14 +161,14 @@ export function Players() {
               >
                 {p.name}
               </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--muted)",
-                }}
-              >
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
                 {playerPayments(p.id).length} payment
                 {playerPayments(p.id).length !== 1 ? "s" : ""}
+                {p.defaultFee !== 1500 && (
+                  <span style={{ color: "var(--blue)", marginLeft: 6 }}>
+                    · {fmtShort(p.defaultFee)} RSD/tr
+                  </span>
+                )}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -183,15 +190,10 @@ export function Players() {
         ))}
       </div>
 
+      {/* Add Player Modal */}
       {showAdd && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowAdd(false)}
-        >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-handle" />
             <div
               style={{
@@ -209,6 +211,13 @@ export function Players() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              style={{ marginBottom: 14 }}
+            />
+            <div className="label">Fee per Training (RSD)</div>
+            <input
+              type="number"
+              value={newFee}
+              onChange={(e) => setNewFee(Number(e.target.value))}
               style={{ marginBottom: 16 }}
             />
             <div style={{ display: "flex", gap: 10 }}>
@@ -229,15 +238,10 @@ export function Players() {
         </div>
       )}
 
+      {/* Player Detail Modal */}
       {selected && (
-        <div
-          className="modal-overlay"
-          onClick={() => setSelectedId(null)}
-        >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="modal-overlay" onClick={() => setSelectedId(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-handle" />
             <div
               style={{
@@ -280,14 +284,62 @@ export function Players() {
                 </div>
               </div>
             </div>
-            <div className="label">Payment History</div>
-            <div
-              style={{
-                maxHeight: 220,
-                overflowY: "auto",
-                marginBottom: 16,
-              }}
-            >
+
+            <div className="label">Fee per Training</div>
+            {editingFee ? (
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <input
+                  type="number"
+                  value={feeInput}
+                  onChange={(e) => setFeeInput(Number(e.target.value))}
+                  autoFocus
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleSaveFee}
+                >
+                  Save
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setEditingFee(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 16,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 16,
+                    color: "var(--fg)",
+                  }}
+                >
+                  {fmt(selected.defaultFee)} RSD
+                </span>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setFeeInput(selected.defaultFee);
+                    setEditingFee(true);
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
+            )}
+
+            <div className="label">Attendance History</div>
+            <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 16 }}>
               {playerPayments(selected.id).length === 0 ? (
                 <div
                   style={{
@@ -296,16 +348,12 @@ export function Players() {
                     padding: "12px 0",
                   }}
                 >
-                  No payments yet
+                  No history yet
                 </div>
               ) : (
                 playerPayments(selected.id)
                   .slice()
-                  .sort(
-                    (a, b) =>
-                      a.id - b.id,
-                  )
-                  .reverse()
+                  .sort((a, b) => b.id - a.id)
                   .map((pay) => {
                     const tr = state.trainings.find(
                       (t) => t.id === pay.trainingId,
@@ -316,6 +364,7 @@ export function Players() {
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
+                          alignItems: "center",
                           padding: "8px 0",
                           borderBottom: "1px solid var(--border)",
                           fontSize: 14,
@@ -324,19 +373,52 @@ export function Players() {
                         <span style={{ color: "var(--muted)" }}>
                           {tr ? dateStr(tr.date) : "—"}
                         </span>
-                        <span
-                          style={{
-                            color: "var(--green)",
-                            fontFamily: "var(--font-mono)",
-                          }}
-                        >
-                          +{fmt(pay.amount)}
-                        </span>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          {pay.attended ? (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: "var(--green)",
+                                background: "rgba(48,209,88,0.1)",
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                              }}
+                            >
+                              attended
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: "var(--muted)",
+                                background: "var(--bg3)",
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                              }}
+                            >
+                              absent
+                            </span>
+                          )}
+                          {pay.attended && (
+                            <span
+                              style={{
+                                color:
+                                  pay.amount > 0
+                                    ? "var(--green)"
+                                    : "var(--muted)",
+                                fontFamily: "var(--font-mono)",
+                              }}
+                            >
+                              {pay.amount > 0 ? `+${fmt(pay.amount)}` : "—"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })
               )}
             </div>
+
             <button
               className="btn btn-danger btn-block"
               onClick={() => handleRemove(selected.id)}
@@ -349,4 +431,3 @@ export function Players() {
     </div>
   );
 }
-

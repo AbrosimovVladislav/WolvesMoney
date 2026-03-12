@@ -61,6 +61,7 @@ FinanceStateProvider  ←  useReducer(FinanceState)
   id: number
   name: string
   balance: number      // накопительный баланс: >0 = переплата (кредит), <0 = долг
+  default_fee: number  // персональный стандартный взнос за тренировку (дефолт: 1 500 RSD)
 }
 ```
 
@@ -82,7 +83,8 @@ FinanceStateProvider  ←  useReducer(FinanceState)
   id: number
   player_id: number
   training_id: number
-  amount: number       // сумма платежа (0 = не платил)
+  attended: boolean    // пришёл ли игрок на тренировку
+  amount: number       // сумма платежа (0 = не заплатил, но мог прийти)
 }
 ```
 
@@ -99,15 +101,22 @@ FinanceStateProvider  ←  useReducer(FinanceState)
 ## Бизнес-логика балансов
 
 ### Стандартный взнос
-`DEFAULT_FEE = 1 500 RSD`
+Хранится на каждом игроке: `player.default_fee` (дефолт: 1 500 RSD).
+Можно редактировать индивидуально в профиле игрока.
 
-### Баланс игрока
-При сохранении платежей:
-- `diff = amount - DEFAULT_FEE`
-- `player.balance += diff`
-- Игрок заплатил 2 000 → balance +500 (кредит)
-- Игрок заплатил 1 000 → balance −500 (долг)
-- Игрок заплатил 1 500 → balance не меняется
+### Баланс игрока — при сохранении платежей
+Логика зависит от поля `attended`:
+
+| attended | amount | Изменение balance |
+|----------|--------|-------------------|
+| false | 0 | **не меняется** (не пришёл → не должен) |
+| true | 0 | `−player.default_fee` (пришёл, не заплатил → должен) |
+| true | N > 0 | `+(N − player.default_fee)` (переплата = кредит, недоплата = долг) |
+
+### Баланс игрока — при удалении тренировки
+При удалении тренировки откатываются все изменения балансов игроков:
+- Для каждого payment тренировки где `attended = true`: `player.balance -= (amount - player.default_fee)`
+- Payments удаляются автоматически (CASCADE)
 
 ### Баланс команды
 - При сохранении платежей: `teamBalance += newResult - oldResult`
