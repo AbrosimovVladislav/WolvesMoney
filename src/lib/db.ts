@@ -12,6 +12,7 @@ export type Training = {
   id: number;
   date: string;
   ice_cost: number;
+  goalie_cost: number;
   total_collected: number;
   result_balance: number;
   notes: string | null;
@@ -27,10 +28,19 @@ export type Payment = {
   created_at?: string;
 };
 
+export type Deposit = {
+  id: number;
+  player_id: number;
+  amount: number;
+  note: string;
+  created_at?: string;
+};
+
 export type FullState = {
   players: Player[];
   trainings: Training[];
   payments: Payment[];
+  deposits: Deposit[];
   teamBalance: number;
 };
 
@@ -90,6 +100,7 @@ export async function createTraining(input: {
     .insert({
       date,
       ice_cost,
+      goalie_cost: 0,
       notes,
       total_collected: 0,
       result_balance: -ice_cost,
@@ -155,24 +166,21 @@ export async function getPaymentsForTraining(
 export async function savePayments(
   trainingId: number,
   entries: Record<number, { attended: boolean; amount: number }>,
+  goalieCost = 0,
 ): Promise<{ collected: number; result: number }> {
   const { data: training, error: tErr } = await supabase
     .from("trainings")
-    .select("ice_cost")
+    .select("ice_cost, result_balance")
     .eq("id", trainingId)
     .single();
   if (tErr) throw tErr;
+
+  const oldResult = training?.result_balance ?? 0;
 
   const { data: oldPayments } = await supabase
     .from("payments")
     .select("player_id, amount, attended")
     .eq("training_id", trainingId);
-
-  const oldCollected = (oldPayments ?? []).reduce(
-    (s, p) => s + (p.amount as number),
-    0,
-  );
-  const oldResult = oldCollected - (training?.ice_cost ?? 0);
 
   const allPlayerIds = [
     ...new Set([
@@ -186,7 +194,6 @@ export async function savePayments(
   const feeMap: Record<number, number> = {};
   (playersData ?? []).forEach((p) => { feeMap[p.id] = p.default_fee; });
 
-  // Reverse old player balances (attended only)
   for (const pay of oldPayments ?? []) {
     if (!pay.attended) continue;
     const defaultFee = feeMap[pay.player_id] ?? 1500;
@@ -221,7 +228,6 @@ export async function savePayments(
     if (iErr) throw iErr;
   }
 
-  // Apply new player balances (attended only)
   for (const [pid, entry] of Object.entries(entries)) {
     if (!entry.attended) continue;
     const numPid = Number(pid);
@@ -232,16 +238,31 @@ export async function savePayments(
     }
   }
 
-  const newResult = newCollected - (training?.ice_cost ?? 0);
+  const newResult = newCollected - (training?.ice_cost ?? 0) - goalieCost;
 
   await supabase
     .from("trainings")
-    .update({ total_collected: newCollected, result_balance: newResult })
+    .update({ total_collected: newCollected, result_balance: newResult, goalie_cost: goalieCost })
     .eq("id", trainingId);
 
   await supabase.rpc("adjust_team_balance", { amount: newResult - oldResult });
 
   return { collected: newCollected, result: newResult };
+}
+
+// ─── DEPOSITS ──────────────────────────────────────────────────────────────────
+
+export async function addDeposit(
+  playerId: number,
+  amount: number,
+  note = "",
+): Promise<void> {
+  const { error } = await supabase
+    .from("deposits")
+    .insert({ player_id: playerId, amount, note });
+  if (error) throw error;
+  await supabase.rpc("adjust_player_balance", { player_id: playerId, amount });
+  await supabase.rpc("adjust_team_balance", { amount });
 }
 
 // ─── TEAM BALANCE & FULL STATE ────────────────────────────────────────────────
@@ -257,14 +278,16 @@ export async function getTeamBalance(): Promise<number> {
 }
 
 export async function loadFullState(): Promise<FullState> {
-  const [players, trainings, paymentsRes, balance] = await Promise.all([
+  const [players, trainings, paymentsRes, depositsRes, balance] = await Promise.all([
     getPlayers(),
     getTrainings(),
     supabase.from("payments").select("*"),
+    supabase.from("deposits").select("*").order("created_at", { ascending: false }),
     getTeamBalance(),
   ]);
 
   const payments = (paymentsRes.data as Payment[]) ?? [];
+  const deposits = (depositsRes.data as Deposit[]) ?? [];
 
-  return { players, trainings, payments, teamBalance: balance };
+  return { players, trainings, payments, deposits, teamBalance: balance };
 }
