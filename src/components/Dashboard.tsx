@@ -68,12 +68,12 @@ export function Dashboard({ state }: { state: FinanceState }) {
 
   const totalPayments = payments.reduce((s, p) => s + p.amount, 0);
   const totalDeposits = deposits.reduce((s, d) => s + d.amount, 0);
-  const totalIncome = totalPayments + totalDeposits;
   const totalExpenses = trainings.reduce(
     (s, t) => s + t.iceCost + (t.goalieCost ?? 0),
     0,
   );
-  const netBalance = totalIncome - totalExpenses;
+  // Team balance = only training payments vs expenses (deposits are extra, shown separately)
+  const netBalance = totalPayments - totalExpenses;
 
   const debtors = players.filter((p) => p.balance < 0);
   const creditors = players.filter((p) => p.balance > 0);
@@ -265,50 +265,26 @@ export function Dashboard({ state }: { state: FinanceState }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            {
-              l: "Total Income",
-              v: fmt(totalIncome),
-              c: "var(--green)",
-            },
-            {
-              l: "Total Expenses",
-              v: fmt(totalExpenses),
-              c: "var(--red)",
-            },
-            {
-              l: "Net Balance",
-              v: fmt(netBalance),
-              c: netBalance >= 0 ? "var(--green)" : "var(--red)",
-            },
+            { l: "Собрано за тренировки", v: fmt(totalPayments), c: "var(--green)" },
+            { l: "Расходы (лёд + вратарь)", v: fmt(totalExpenses), c: "var(--red)" },
+            { l: "Баланс тренировок", v: fmt(netBalance), c: netBalance >= 0 ? "var(--green)" : "var(--red)" },
           ].map(({ l, v, c }) => (
-            <div
-              key={l}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{
-                  color: "var(--muted)",
-                  fontSize: 14,
-                }}
-              >
-                {l}
-              </span>
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: 600,
-                  color: c,
-                  fontSize: 14,
-                }}
-              >
-                {v}
-              </span>
+            <div key={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--muted)", fontSize: 14 }}>{l}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: c, fontSize: 14 }}>{v}</span>
             </div>
           ))}
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+
+          {/* Deposits as extra line */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "var(--muted)", fontSize: 14 }}>Депозиты игроков (доп.)</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--cyan)", fontSize: 14 }}>
+              +{fmt(totalDeposits)}
+            </span>
+          </div>
         </div>
       </div>
 

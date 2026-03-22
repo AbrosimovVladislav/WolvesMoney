@@ -41,10 +41,10 @@ export function Statistics() {
   const totalOwedToPlayers = creditors.reduce((s, p) => s + p.balance, 0);
   const totalOwedByPlayers = debtors.reduce((s, p) => s + Math.abs(p.balance), 0);
 
-  const totalIncome = state.payments.reduce((s, p) => s + p.amount, 0)
-    + state.deposits.reduce((s, d) => s + d.amount, 0);
+  const totalPayments = state.payments.reduce((s, p) => s + p.amount, 0);
   const totalExpenses = state.trainings.reduce((s, t) => s + t.iceCost + (t.goalieCost ?? 0), 0);
-  const netBalance = totalIncome - totalExpenses;
+  // Balance = only training payments vs expenses (deposits excluded)
+  const netBalance = totalPayments - totalExpenses;
 
   const exportCSV = () => {
     const header = "Date,Collected,Ice Cost,Result,Balance\n";
