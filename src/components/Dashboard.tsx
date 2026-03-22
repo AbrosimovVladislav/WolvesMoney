@@ -72,8 +72,8 @@ export function Dashboard({ state }: { state: FinanceState }) {
     (s, t) => s + t.iceCost + (t.goalieCost ?? 0),
     0,
   );
-  // Team balance = only training payments vs expenses (deposits are extra, shown separately)
-  const netBalance = totalPayments - totalExpenses;
+  // Team balance = training payments − expenses − deposits (deposits are liabilities owed back to players)
+  const netBalance = totalPayments - totalExpenses - totalDeposits;
 
   const debtors = players.filter((p) => p.balance < 0);
   const creditors = players.filter((p) => p.balance > 0);
@@ -265,9 +265,9 @@ export function Dashboard({ state }: { state: FinanceState }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            { l: "Собрано за тренировки", v: fmt(totalPayments), c: "var(--green)" },
-            { l: "Расходы (лёд + вратарь)", v: fmt(totalExpenses), c: "var(--red)" },
-            { l: "Баланс тренировок", v: fmt(netBalance), c: netBalance >= 0 ? "var(--green)" : "var(--red)" },
+            { l: "Собрано за тренировки", v: `+${fmt(totalPayments)}`, c: "var(--green)" },
+            { l: "Расходы (лёд + вратарь)", v: `-${fmt(totalExpenses)}`, c: "var(--red)" },
+            { l: "Депозиты игроков (долг)", v: `-${fmt(totalDeposits)}`, c: "var(--cyan)" },
           ].map(({ l, v, c }) => (
             <div key={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: "var(--muted)", fontSize: 14 }}>{l}</span>
@@ -275,14 +275,12 @@ export function Dashboard({ state }: { state: FinanceState }) {
             </div>
           ))}
 
-          {/* Divider */}
           <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
 
-          {/* Deposits as extra line */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "var(--muted)", fontSize: 14 }}>Депозиты игроков (доп.)</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--cyan)", fontSize: 14 }}>
-              +{fmt(totalDeposits)}
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Баланс команды</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: netBalance >= 0 ? "var(--green)" : "var(--red)", fontSize: 14 }}>
+              {fmt(netBalance)}
             </span>
           </div>
         </div>
