@@ -16,6 +16,7 @@ export type Training = {
   total_collected: number;
   result_balance: number;
   notes: string | null;
+  ice_paid: boolean;
   created_at?: string;
 };
 
@@ -109,6 +110,14 @@ export async function createTraining(input: {
     .single();
   if (error) throw error;
   return data as Training;
+}
+
+export async function markIcePaid(id: number, paid: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("trainings")
+    .update({ ice_paid: paid })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function removeTraining(id: number): Promise<void> {

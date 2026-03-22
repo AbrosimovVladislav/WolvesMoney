@@ -67,16 +67,32 @@ export function Dashboard({ state }: { state: FinanceState }) {
   )[0];
 
   const totalPayments = payments.reduce((s, p) => s + p.amount, 0);
-  const totalDeposits = deposits.reduce((s, d) => s + d.amount, 0);
   const totalExpenses = trainings.reduce(
     (s, t) => s + t.iceCost + (t.goalieCost ?? 0),
     0,
   );
-  // Team balance = training payments − expenses − deposits (deposits are liabilities owed back to players)
-  const netBalance = totalPayments - totalExpenses - totalDeposits;
 
   const debtors = players.filter((p) => p.balance < 0);
   const creditors = players.filter((p) => p.balance > 0);
+
+  // Money owed back to players (positive player balances = deposits + overpayments)
+  const totalOwedToPlayers = creditors.reduce((s, p) => s + p.balance, 0);
+  // Money players owe the team (negative player balances)
+  const totalOwedByPlayers = debtors.reduce((s, p) => s + Math.abs(p.balance), 0);
+
+  // Physical cash at cashier = last training collections minus goalie already paid
+  const lastTrainingCollected = lastTraining
+    ? payments.filter((p) => p.trainingId === lastTraining.id).reduce((s, p) => s + p.amount, 0)
+    : 0;
+  const lastGoalieCost = lastTraining ? (lastTraining.goalieCost ?? 0) : 0;
+  // Cash on hand = 0 if last training ice is already paid (cashier is empty)
+  const cashOnHand = (lastTraining && !lastTraining.icePaid)
+    ? lastTrainingCollected - lastGoalieCost
+    : 0;
+  // Unpaid ice = sum of ice costs for all trainings not yet marked as paid
+  const unpaidIce = trainings.filter((t) => !t.icePaid).reduce((s, t) => s + t.iceCost, 0);
+  // Real balance = cash - unpaid ice - debt to players + debt from players
+  const realBalance = (cashOnHand - unpaidIce) - totalOwedToPlayers + totalOwedByPlayers;
 
   const lastResult = lastTraining
     ? payments
@@ -91,7 +107,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
         style={{
           margin: "0 -16px 20px",
           padding: "22px 20px 20px",
-          background: netBalance >= 0
+          background: realBalance >= 0
             ? "linear-gradient(135deg, #002868 0%, #1A4FA0 100%)"
             : "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
           borderRadius: "0 0 20px 20px",
@@ -99,7 +115,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
-            HC Vukovi · Team Balance
+            HC Vukovi · Касса
           </div>
           <div style={{
             width: 62,
@@ -120,7 +136,7 @@ export function Dashboard({ state }: { state: FinanceState }) {
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 14 }}>
           <div style={{ fontSize: 42, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", fontFamily: "var(--font-mono)", lineHeight: 1 }}>
-            {fmtShort(netBalance)}
+            {fmtShort(realBalance)}
           </div>
           <div style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>RSD</div>
         </div>
@@ -129,12 +145,12 @@ export function Dashboard({ state }: { state: FinanceState }) {
             height: "100%",
             borderRadius: 3,
             background: "rgba(255,255,255,0.85)",
-            width: `${Math.min(100, Math.max(4, (Math.abs(netBalance) / 50000) * 100))}%`,
+            width: `${Math.min(100, Math.max(4, (Math.abs(realBalance) / 50000) * 100))}%`,
             transition: "width 0.6s ease",
           }} />
         </div>
         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 5, textAlign: "right" }}>
-          {Math.round((Math.abs(netBalance) / 50000) * 100)}% of 50k target
+          {Math.round((Math.abs(realBalance) / 50000) * 100)}% of 50k target
         </div>
       </div>
 
@@ -147,9 +163,9 @@ export function Dashboard({ state }: { state: FinanceState }) {
         }}
       >
         <StatCard
-          label="Net Balance"
-          value={fmt(netBalance)}
-          color={netBalance >= 0 ? "green" : "red"}
+          label="Реальный баланс"
+          value={fmt(realBalance)}
+          color={realBalance >= 0 ? "green" : "red"}
           delay={0}
         />
         <StatCard
@@ -265,9 +281,8 @@ export function Dashboard({ state }: { state: FinanceState }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            { l: "Собрано за тренировки", v: `+${fmt(totalPayments)}`, c: "var(--green)" },
-            { l: "Расходы (лёд + вратарь)", v: `-${fmt(totalExpenses)}`, c: "var(--red)" },
-            { l: "Депозиты игроков (долг)", v: `-${fmt(totalDeposits)}`, c: "var(--cyan)" },
+            { l: "У кассира на руках", v: `+${fmt(cashOnHand)}`, c: "var(--green)" },
+            { l: "Оплата льда (не оплачен)", v: `-${fmt(unpaidIce)}`, c: "var(--red)" },
           ].map(({ l, v, c }) => (
             <div key={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: "var(--muted)", fontSize: 14 }}>{l}</span>
@@ -278,9 +293,25 @@ export function Dashboard({ state }: { state: FinanceState }) {
           <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Баланс команды</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: netBalance >= 0 ? "var(--green)" : "var(--red)", fontSize: 14 }}>
-              {fmt(netBalance)}
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Реальный баланс</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: realBalance >= 0 ? "var(--green)" : "var(--red)", fontSize: 14 }}>
+              {fmt(realBalance)}
+            </span>
+          </div>
+
+          <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, color: "var(--muted)" }}>Долг игрокам</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--cyan)", fontSize: 14 }}>
+              -{fmt(totalOwedToPlayers)}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, color: "var(--muted)" }}>Должны нам</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--green)", fontSize: 14 }}>
+              +{fmt(totalOwedByPlayers)}
             </span>
           </div>
         </div>

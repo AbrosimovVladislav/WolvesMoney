@@ -18,6 +18,7 @@ import {
   savePayments as dbSavePayments,
   updatePlayerFee as dbUpdatePlayerFee,
   addDeposit as dbAddDeposit,
+  markIcePaid as dbMarkIcePaid,
 } from "../lib/db";
 
 export type PlayerState = {
@@ -35,6 +36,7 @@ export type TrainingState = {
   notes: string | null;
   totalCollected: number;
   resultBalance: number;
+  icePaid: boolean;
 };
 
 export type PaymentState = {
@@ -94,6 +96,7 @@ function mapFromFullState(full: FullState): Omit<FinanceState, "loading" | "erro
       notes: t.notes,
       totalCollected: t.total_collected,
       resultBalance: t.result_balance,
+      icePaid: t.ice_paid ?? false,
     })),
     payments: full.payments.map((p) => ({
       id: p.id,
@@ -140,6 +143,7 @@ type FinanceContextValue = {
   ) => Promise<void>;
   updatePlayerFee: (id: number, fee: number) => Promise<void>;
   addDeposit: (playerId: number, amount: number, note?: string) => Promise<void>;
+  markIcePaid: (id: number, paid: boolean) => Promise<void>;
 };
 
 const FinanceContext = createContext<FinanceContextValue | undefined>(undefined);
@@ -178,6 +182,10 @@ export function FinanceStateProvider({ children }: { children: React.ReactNode }
       updatePlayerFee: async (id, fee) => { await dbUpdatePlayerFee(id, fee); await load(); },
       addDeposit: async (playerId, amount, note = "") => {
         await dbAddDeposit(playerId, amount, note);
+        await load();
+      },
+      markIcePaid: async (id, paid) => {
+        await dbMarkIcePaid(id, paid);
         await load();
       },
     }),

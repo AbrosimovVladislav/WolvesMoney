@@ -42,10 +42,9 @@ export function Statistics() {
   const totalOwedByPlayers = debtors.reduce((s, p) => s + Math.abs(p.balance), 0);
 
   const totalPayments = state.payments.reduce((s, p) => s + p.amount, 0);
-  const totalDeposits = state.deposits.reduce((s, d) => s + d.amount, 0);
   const totalExpenses = state.trainings.reduce((s, t) => s + t.iceCost + (t.goalieCost ?? 0), 0);
-  // Balance = training payments − expenses − deposits (deposits are liabilities owed to players)
-  const netBalance = totalPayments - totalExpenses - totalDeposits;
+  // Balance = training income + player credits (deposits) - expenses
+  const netBalance = totalPayments + totalOwedToPlayers - totalExpenses;
 
   const exportCSV = () => {
     const header = "Date,Collected,Ice Cost,Result,Balance\n";
@@ -86,7 +85,7 @@ export function Statistics() {
           {/* Summary row */}
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             {[
-              { label: "Net Balance", value: fmtShort(netBalance), color: netBalance >= 0 ? "var(--green)" : "var(--red)" },
+              { label: "В кассе", value: fmtShort(netBalance), color: netBalance >= 0 ? "var(--green)" : "var(--red)" },
               { label: "Trainings", value: String(state.trainings.length), color: "var(--primary)" },
               { label: "Players", value: String(state.players.length), color: "var(--cyan)" },
             ].map(({ label, value, color }) => (

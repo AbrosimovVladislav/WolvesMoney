@@ -11,7 +11,7 @@ type Props = {
 };
 
 export function Trainings({ onOpenPayments }: Props) {
-  const { state, createTraining, removeTraining } = useFinance();
+  const { state, createTraining, removeTraining, markIcePaid } = useFinance();
   const { isAdmin } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
@@ -224,17 +224,22 @@ export function Trainings({ onOpenPayments }: Props) {
                 </div>
               ))}
             </div>
-            <div
-              style={{
-                marginTop: 12,
-                textAlign: "center",
-                fontSize: 12,
-                color: "var(--blue)",
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-              }}
-            >
-              TAP TO ENTER PAYMENTS →
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12, color: "var(--blue)", fontWeight: 600, letterSpacing: "0.04em" }}>
+                TAP TO ENTER PAYMENTS →
+              </div>
+              {isAdmin && (
+                <button
+                  className={`btn btn-sm ${t.icePaid ? "btn-secondary" : "btn-primary"}`}
+                  style={{ fontSize: 11, padding: "4px 10px" }}
+                  onClick={(e) => { e.stopPropagation(); markIcePaid(t.id, !t.icePaid); }}
+                >
+                  {t.icePaid ? "✓ Лёд оплачен" : "Оплатить лёд"}
+                </button>
+              )}
+              {!isAdmin && t.icePaid && (
+                <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 600 }}>✓ Лёд оплачен</div>
+              )}
             </div>
           </div>
         );
