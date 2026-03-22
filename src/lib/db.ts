@@ -262,7 +262,7 @@ export async function addDeposit(
     .insert({ player_id: playerId, amount, note });
   if (error) throw error;
   await supabase.rpc("adjust_player_balance", { player_id: playerId, amount });
-  await supabase.rpc("adjust_team_balance", { amount });
+  // Deposits are player prepayments; team_balance tracks training payments vs ice/goalie only (see Dashboard netBalance).
 }
 
 // ─── TEAM BALANCE & FULL STATE ────────────────────────────────────────────────
